@@ -51,7 +51,7 @@ def check_output(cmd, log=True):
 
 # This variable is updated from main function
 SSH_OPTS = "-o LogLevel=quiet -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "
-SSH_OPTS += "-o ConnectTimeout={0}"
+SSH_OPTS += "-o ConnectTimeout={0} -l {1} -i {2}"
 
 
 def check_output_ssh(host, opts, cmd, no_retry=False, max_retry=3):
@@ -635,6 +635,14 @@ def parse_args(argv):
                    default="/etc/ceph/ceph.client.admin.keyring",
                    help="Ceph cluster key file")
 
+    p.add_argument("--username",
+                   default="ansible",
+                   help="Username to login on nodes with.")
+
+    p.add_argument("--ssh-private-key",
+                   default="~/.ssh/id_rsa",
+                   help="Path to SSH private key to use.")
+
     p.add_argument("-l", "--log-level",
                    choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
                    default="INFO",
@@ -725,7 +733,7 @@ def pmap(func, data, thcount):
 
 
 def get_sshable_hosts(hosts, thcount=32):
-    cmd = "ssh -o LogLevel=quiet -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=60 -o ConnectionAttempts=2 "
+    cmd = "ssh {0} ".format(SSH_OPTS)
 
     def check_host(host):
         try:
@@ -764,7 +772,8 @@ def main(argv):
     logger_ready = True
 
     global SSH_OPTS
-    SSH_OPTS = SSH_OPTS.format(opts.ssh_conn_timeout)
+    SSH_OPTS = SSH_OPTS.format(opts.ssh_conn_timeout, opts.username,
+                               opts.ssh_private_key)
 
     collector_settings = CollectSettings()
     map(collector_settings.disable, opts.disable)
